@@ -20,7 +20,8 @@ namespace Chat
         Socket socket;
         EndPoint epLocal, epRemote;
         byte[] buffer;
-        
+        List<User> Users;
+
         public Form1()
         {
             InitializeComponent();
@@ -34,9 +35,11 @@ namespace Chat
             msg = enc.GetBytes(SendTxt.Text);
 
             socket.Send(msg);
-
-            listBox1.Items.Add(item[MainMenu.userID].username + ": " + SendTxt.Text);
-            SendTxt.Clear();
+            if (SendTxt.Text != "")
+            {
+                listBox1.Items.Add(Users[MainMenu.userID].username + ": " + SendTxt.Text);
+                SendTxt.Clear();
+            }
         }
 
         private void SendTxt_TextChanged(object sender, EventArgs e)
@@ -81,14 +84,14 @@ namespace Chat
                 MessageBox.Show(e.ToString());
             }
         }
-        List<User> item;
+        
         private void Form1_Load(object sender, EventArgs e)
         {
             using (StreamReader r = new StreamReader("DATA.json"))
             {
                 string json = r.ReadToEnd();
                 List<User> items = JsonConvert.DeserializeObject<List<User>>(json);
-                item = items;
+                Users = items;
                 for(int i = 0; i < items.Count; i++)
                 {
                     comboBox1.Items.Add(items[i].username);
@@ -105,7 +108,7 @@ namespace Chat
                 SocketOptionName.ReuseAddress,
                 true);
 
-         
+            Disconnect.Enabled = false;
         }
 
         private void label2_Click(object sender, EventArgs e)
@@ -123,10 +126,10 @@ namespace Chat
             try
             {
                 epLocal = new IPEndPoint(
-                    IPAddress.Parse(item[MainMenu.userID].ip), item[MainMenu.userID].port);
+                    IPAddress.Parse(Users[MainMenu.userID].ip), Users[MainMenu.userID].port);
                 socket.Bind(epLocal);
 
-                epRemote = new IPEndPoint(IPAddress.Parse(item[friendId].ip), item[friendId].port);
+                epRemote = new IPEndPoint(IPAddress.Parse(Users[friendId].ip), Users[friendId].port);
                 socket.Connect(epRemote);
 
                 buffer = new byte[1500];
@@ -140,7 +143,9 @@ namespace Chat
                     buffer);
 
                 SendBtn.Enabled = true;
-                StartButton.Text = "Connected";
+                StartButton.Text = "Connected to " + Users[friendId].username;
+                Disconnect.Enabled = true;
+                Disconnect.Text = "Disconnect from " + Users[friendId].username;
                 StartButton.Enabled = false;
                 SendTxt.Focus();
             }
@@ -150,11 +155,38 @@ namespace Chat
             }
         }
 
+        private void ListBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+        private static bool IsSocketConnected(Socket socket)
+        {
+            try
+            {
+                return !(socket.Poll(1, SelectMode.SelectRead) && socket.Available == 0);
+            }
+            catch (SocketException) { return false; }
+        }
+        private void Disconnect_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                socket.Shutdown(SocketShutdown.Both);
+            }
+            finally
+            {
+                socket.Close();
+            }
+            Disconnect.Enabled = false;
+            Disconnect.Text = "Disconnect";
+
+        }
+
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            for(int i = 0; i < item.Count; i++)
+            for(int i = 0; i < Users.Count; i++)
             {
-                if (item[i].username == item[Int32.Parse(comboBox1.SelectedIndex.ToString())].username)
+                if (Users[i].username == Users[Int32.Parse(comboBox1.SelectedIndex.ToString())].username)
                     friendId = i;
                 
             }

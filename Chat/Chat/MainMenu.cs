@@ -21,6 +21,33 @@ namespace Chat
             InitializeComponent();
         }
 
+        public static char cipher(char ch, int key)
+        {
+            if (!char.IsLetter(ch))
+            {
+                return ch;
+            }
+
+            char d = char.IsUpper(ch) ? 'A' : 'a';
+            return (char)((((ch + key) - d) % 26) + d);
+        }
+
+
+        public static string Encipher(string input, int key)
+        {
+            string output = string.Empty;
+
+            foreach (char ch in input)
+                output += cipher(ch, key);
+
+            return output;
+        }
+
+        public static string Decipher(string input, int key)
+        {
+            return Encipher(input, 26 - key);
+        }
+
         private void label1_Click(object sender, EventArgs e) // Go to Create Account
         {
             PasswordTxt.Visible = false;
@@ -80,7 +107,7 @@ namespace Chat
                         res += text[i];
                     }
                 }
-                res += "{ \"username\": \"" + CreateAccUsername.Text + "\", \"password\": \"" + CreateAccPassword.Text + "\", \"ip\": \"" + CreateAccIP.Text + "\", \"port\": \"" + Int32.Parse(CreateAccPort.Text) + "\"},]";
+                res += "{ \"username\": \"" + CreateAccUsername.Text + "\", \"password\": \"" + Encipher(CreateAccPassword.Text, 3)+ "\", \"ip\": \"" + CreateAccIP.Text + "\", \"port\": \"" + Int32.Parse(CreateAccPort.Text) + "\"},]";
                 File.WriteAllText("DATA.json", res);
                 var form = new Form1();
                 this.Hide();
@@ -103,13 +130,13 @@ namespace Chat
                 List<User> items = JsonConvert.DeserializeObject<List<User>>(json);
                 for(int i = 0; i < items.Count; i++)
                 {
-                    if(items[i].username == UsernameTxt.Text && items[i].password == PasswordTxt.Text)
+                    if(items[i].username == UsernameTxt.Text && Decipher(items[i].password,3) == PasswordTxt.Text)
                     {
                         var form = new Form1();
                         userID = i;
+
                         this.Hide();
                         form.Show();
-                       
                     }
                 }
                 label2.Text = "The credentials you entered is wrong.";
